@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "license": "MIT",
+  "bin": {
+    "pyre-product": "./dist/index.js"
+  },
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only ./src/index.ts",
     "build": "tsc",
@@ -19,6 +22,7 @@
     "morgan": "^1.10.0",
     "pg": "^8.12.0",
     "pg-promise": "^11.9.1",
+    "systeminformation": "^5.23.5",
     "uuid": "^10.0.0"
   },
   "devDependencies": {
