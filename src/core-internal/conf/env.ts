@@ -4,6 +4,9 @@ export interface Config {
     port: string
     production: boolean
 
+    gRPCHost: string
+    gRPCPort: string
+
     dbRead: {
         host: string
         port: string
