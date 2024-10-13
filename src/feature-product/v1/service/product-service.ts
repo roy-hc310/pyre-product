@@ -88,7 +88,7 @@ export class ProductService {
 
             const productString = `SELECT p.id, p.created_at, p.updated_at, p.deleted_at, p.uuid, p.name, p.sku, p.shop_id, p.description, p.active, p.brand, p.category, p.images, p.video, p.status, v.id AS variant_id, v.uuid AS variant_uuid, v.product_id AS product_id, v.name AS variant_name, v.sku AS variant_sku, v.variant_type, v.price, v.active AS variant_active, v.stock, v.image AS variant_image, v.weight, v.height, v.width, v.length FROM product.products p LEFT JOIN product.variants v on p.uuid = v.product_id WHERE p.uuid = $1 AND p.deleted_at IS NULL;`
 
-            const rows = await this.postgresInfra.dbWritePool.manyOrNone(productString, id)
+            const rows = await this.postgresInfra.dbReadPool.manyOrNone(productString, id)
             if (rows.length === 0) {
                 return null
             }

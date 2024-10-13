@@ -13,6 +13,10 @@ export const Env: Config = {
     host: process.env.HOST || "localhost",
     port: process.env.PORT || "8000",
     production: process.env.PRODUCTION === "prod",
+
+    gRPCHost: process.env.GRPC_HOST || "127.0.0.1",
+    gRPCPort: process.env.GRPC_PORT || "50051",
+
     dbRead: {
         host: process.env.DB_READ_HOST || "localhost",
         port: process.env.DB_READ_PORT || "5432",
