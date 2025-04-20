@@ -1,3 +1,4 @@
+import { ElasticSearchInfrastructure } from "../../../core-internal/infrastructure/elastic-search";
 import { PostgresInfrastructure } from "../../../core-internal/infrastructure/postgres";
 import { CoreQuery } from "../../../core-internal/model/core-model";
 import { PrepareInsertQuery, PrepareSelectQuery, PrepareUpdateQuery } from "../../../core-internal/utils/common";
@@ -12,8 +13,10 @@ import { v4 } from 'uuid';
 
 export class ProductService {
     postgresInfra: PostgresInfrastructure
-    constructor(postgresInfra: PostgresInfrastructure) {
+    elasticSearchInfra: ElasticSearchInfrastructure
+    constructor(postgresInfra: PostgresInfrastructure, elasticSearchInfra: ElasticSearchInfrastructure) {
         this.postgresInfra = postgresInfra
+        this.elasticSearchInfra = elasticSearchInfra
     }
 
     async CreateProduct(data: ProductRequest): Promise<ProductIdResponse> {
@@ -69,6 +72,17 @@ export class ProductService {
                 await t.none(variantString, variantParams)
             })
 
+            console.log(this.elasticSearchInfra.client.info())
+
+            let elasticSearchData: ProductResponse = {}
+            elasticSearchData = {...data}
+            elasticSearchData.uuid = productUUID
+            await this.elasticSearchInfra.client.index({ 
+                index: "products", 
+                id: productUUID,
+                body: elasticSearchData 
+            })
+            await this.elasticSearchInfra.client.indices.refresh({index: 'products'})
 
             const res: ProductIdResponse = { 
                 id: productUUID 
@@ -225,13 +239,33 @@ export class ProductService {
                 productString += `ORDER BY ${DefaultOrder} `
             }
 
+            if (query.search) {
+                const esQuery = {
+                    index: "products",
+                    body: {
+                        query: {
+                            match: {
+                                name: query.search
+                            }
+                        }
+                    },
+                    size: query.size ? query.size : DefaultSize,
+                    sort: query.sort ? query.sort : DefaultOrder,
+                    from: query.cursor ? Number(query.cursor) : 0
+                }
+                const esResponse = await this.elasticSearchInfra.client.search(esQuery)
+                if (esResponse.hits.total === 0) {
+                    return esResponse.hits.hits.map(hit => hit._source) as ProductResponse[]
+                }
+            }
+
             if (query.size) {
                 productString += `LIMIT ${query.size};`
             } else {
                 productString += `LIMIT ${DefaultSize};`
             }
 
-            const products = await this.postgresInfra.dbReadPool.manyOrNone(productString, productInterface)
+            const products = await this.postgresInfra.dbReadPool.manyOrNone(productString, productInterface) as ProductResponse[]
             
 
             let productsId: string[] = []
