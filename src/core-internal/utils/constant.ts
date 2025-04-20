@@ -1,6 +1,9 @@
 
 
 
+export const XShopId = "x-shop-id"
+export const XLanguage = "x-language"
+
 export const DefaultSize = "10"
 export const DefaultOrder = "id DESC"
 

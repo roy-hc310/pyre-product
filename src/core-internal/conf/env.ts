@@ -24,4 +24,9 @@ export interface Config {
         database: string
         schema: string
     }
+
+    elasticSearch: {
+        host: string
+        port: string
+    }
 }

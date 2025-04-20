@@ -33,4 +33,9 @@ export const Env: Config = {
         database: process.env.DB_WRITE_NAME || "postgres",
         schema: process.env.DB_WRITE_SCHEMA || "public",
     },
+
+    elasticSearch: {
+        host: process.env.ELASTIC_HOST || "http://localhost:9200",
+        port: process.env.ELASTIC_PORT || "9200",
+    },
 }

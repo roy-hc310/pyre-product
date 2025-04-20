@@ -2,10 +2,8 @@ import { Request, Response } from "express";
 import { ProductService } from "../service/product-service";
 import { ProductRequest } from "../model/product-request";
 import { CoreQuery, CoreResponseObject } from "../../../core-internal/model/core-model";
-import { ProductIdResponse } from "../model/product-response";
-
-
-
+import { ProductIdResponse, ProductResponse } from "../model/product-response";
+import { XShopId } from "../../../core-internal/utils/constant";
 
 
 export class ProductController {
@@ -41,7 +39,7 @@ export class ProductController {
             const id = req.params.id
             const data = await this.productService.DetailProduct(id)
 
-            const response: CoreResponseObject<ProductIdResponse> = {
+            const response: CoreResponseObject<ProductResponse> = {
                 data: data,
                 succeed: true,
                 errors: []
@@ -83,11 +81,14 @@ export class ProductController {
 
     async ListProducts(req: Request, res: Response): Promise<void> {
         try {
+            
             const query: CoreQuery = req.query as CoreQuery
+            query.shop_id = req.get(XShopId)
+
 
             const data = await this.productService.ListProducts(query)
             
-            const response: CoreResponseObject<ProductIdResponse[]> = {
+            const response: CoreResponseObject<ProductResponse[]> = {
                 data: data,
                 succeed: true,
                 errors: []
