@@ -15,6 +15,8 @@ export class ProductController {
     async CreateProduct(req: Request, res: Response): Promise<void> {
         try {
             const body: ProductRequest = req.body
+            body.shop_id = req.get(XShopId) as string
+            
             const data = await this.productService.CreateProduct(body)
 
             const response: CoreResponseObject<ProductIdResponse> = {
@@ -60,6 +62,8 @@ export class ProductController {
         try {
             const id = req.params.id
             const body: ProductRequest = req.body
+            body.shop_id = req.get(XShopId) as string
+
             const data = await this.productService.UpdateProduct(id, body)
 
             const response: CoreResponseObject<ProductIdResponse> = {
@@ -83,8 +87,7 @@ export class ProductController {
         try {
             
             const query: CoreQuery = req.query as CoreQuery
-            query.shop_id = req.get(XShopId)
-
+            query.shop_id = req.get(XShopId) as string
 
             const data = await this.productService.ListProducts(query)
             
