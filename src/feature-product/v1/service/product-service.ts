@@ -1,8 +1,8 @@
 import { ElasticSearchInfrastructure } from "../../../core-internal/infrastructure/elastic-search";
 import { PostgresInfrastructure } from "../../../core-internal/infrastructure/postgres";
-import { CoreQuery } from "../../../core-internal/model/core-model";
-import { PrepareInsertQuery, PrepareSelectQuery, PrepareUpdateQuery } from "../../../core-internal/utils/common";
-import { DefaultOrder, DefaultSize, ProductColumnListForInsert, ProductColumnListForSelect, ProductColumnListForUpdate, ProductTableName, VariantColumnListForInsert, VariantColumnListForSelect, VariantTableName } from "../../../core-internal/utils/constant";
+import { CoreQuery, CoreResponseList, Pagination } from "../../../core-internal/model/core-model";
+import { PrepareInsertQuery, PrepareSelectCountQuery, PrepareSelectQuery, PrepareUpdateQuery } from "../../../core-internal/utils/common";
+import { DefaultOrder, DefaultPage, DefaultSize, ProductColumnListForInsert, ProductColumnListForSelect, ProductColumnListForUpdate, ProductTableName, VariantColumnListForInsert, VariantColumnListForSelect, VariantTableName } from "../../../core-internal/utils/constant";
 import { ProductRequest, Variant } from "../model/product-request";
 import { ProductIdResponse, ProductResponse } from "../model/product-response";
 import { v4 } from 'uuid';
@@ -215,9 +215,30 @@ export class ProductService {
         return res
     }
 
-    async ListProducts(query: CoreQuery): Promise<ProductResponse[]> {
+    async ListProducts(query: CoreQuery): Promise<[ProductResponse[], Pagination]> {
         try {
+            const pagination: Pagination = {
+                page: query.page || DefaultPage,
+                size: query.size || DefaultSize,
+                total_items: null,
+                next_cursor: null
+            }
+
             let intVariables: number = 0
+            let countInterface: any[] = []
+
+            let countString = PrepareSelectCountQuery(ProductTableName)
+            
+            if (query.shop_id) {
+                intVariables++
+                countString += `AND shop_id = $${intVariables} `
+                countInterface.push(query.shop_id)
+            }
+            //tech debt: add cache for pagination
+            const count = await this.postgresInfra.dbReadPool.one(countString, countInterface)
+            pagination.total_items = count.count
+
+            intVariables = 0
             let productInterface: any[] = []
             let productString = PrepareSelectQuery(ProductTableName, ProductColumnListForSelect)
 
@@ -227,7 +248,7 @@ export class ProductService {
                 productInterface.push(query.shop_id)
             }
 
-            if (query.cursor) {
+            if (query.cursor && !query.page) {
                 intVariables++
                 productString += `AND id < $${intVariables} `
                 productInterface.push(query.cursor)
@@ -239,6 +260,7 @@ export class ProductService {
                 productString += `ORDER BY ${DefaultOrder} `
             }
 
+            //tech debt: add cache for pagination
             if (query.search) {
                 const esQuery = {
                     index: "products",
@@ -255,18 +277,22 @@ export class ProductService {
                 }
                 const esResponse = await this.elasticSearchInfra.client.search(esQuery)
                 if (esResponse.hits.total === 0) {
-                    return esResponse.hits.hits.map(hit => hit._source) as ProductResponse[]
+                    return [esResponse.hits.hits.map(hit => hit._source) as ProductResponse[], pagination]
                 }
             }
 
             if (query.size) {
-                productString += `LIMIT ${query.size};`
+                productString += `LIMIT ${query.size} `
             } else {
-                productString += `LIMIT ${DefaultSize};`
+                productString += `LIMIT ${DefaultSize} `
+            }
+
+            if (query.page) {
+                const offset = (Number(query.page) - 1) * Number(query.size)
+                productString += `OFFSET ${offset} `
             }
 
             const products = await this.postgresInfra.dbReadPool.manyOrNone(productString, productInterface) as ProductResponse[]
-            
 
             let productsId: string[] = []
             for (let i = 0; i < products.length; i++) {
@@ -276,11 +302,11 @@ export class ProductService {
             }
 
             if (productsId.length === 0) {
-                return []
+                return [[], pagination]
             }
 
             let variantString = PrepareSelectQuery(VariantTableName, VariantColumnListForSelect)
-            variantString += ` AND product_id IN ('${productsId.join("','")}')`
+            variantString += `AND product_id IN ('${productsId.join("','")}')`
 
             const variants = await this.postgresInfra.dbReadPool.manyOrNone(variantString)
 
@@ -312,7 +338,7 @@ export class ProductService {
             }
 
 
-            return products
+            return [products, pagination]
         } catch (error) {
             throw error
         }
