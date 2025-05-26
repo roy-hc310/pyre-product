@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { ProductService } from "../service/product-service";
 import { ProductRequest } from "../model/product-request";
-import { CoreQuery, CoreResponseObject } from "../../../core-internal/model/core-model";
+import { CoreQuery, CoreResponseList, CoreResponseObject } from "../../../core-internal/model/core-model";
 import { ProductIdResponse, ProductResponse } from "../model/product-response";
 import { XShopId } from "../../../core-internal/utils/constant";
 
@@ -89,20 +89,28 @@ export class ProductController {
             const query: CoreQuery = req.query as CoreQuery
             query.shop_id = req.get(XShopId) as string
 
-            const data = await this.productService.ListProducts(query)
+            const [data, pagination] = await this.productService.ListProducts(query)
             
-            const response: CoreResponseObject<ProductResponse[]> = {
+            const response: CoreResponseList<ProductResponse[]> = {
                 data: data,
                 succeed: true,
-                errors: []
+                errors: [],
+                page: pagination.page,
+                size: pagination.size,
+                total_items: pagination.total_items,
+                next_cursor: pagination.next_cursor
             }
             res.status(200).json(response)
         } catch (error) {
             const err = error as Error
-            const errResponse: CoreResponseObject<null> = {
+            const errResponse: CoreResponseList<null> = {
                 data: null,
                 succeed: false,
-                errors: [err.message]
+                errors: [err.message],
+                page: null,
+                size: null,
+                total_items: null,
+                next_cursor: null
             }
             res.status(500).json(errResponse)
         }

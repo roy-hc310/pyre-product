@@ -40,3 +40,8 @@ export function PrepareSelectQuery(tableName: string, colunmsName: string[]): st
 
     return queryString
 }
+
+export function PrepareSelectCountQuery(tableName: string): string {
+    const queryString = `SELECT COUNT(*) FROM ${tableName} WHERE deleted_at IS NULL `
+    return queryString
+}
